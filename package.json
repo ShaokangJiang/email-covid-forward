@@ -26,6 +26,7 @@
     "node-fetch": "^2.6.1",
     "node-html-parser": "^3.0.3",
     "node-nlp": "^4.21.3",
+    "sentence-tokenizer": "^1.0.1",
     "solarlunar": "^2.0.7"
   }
 }

@@ -4,25 +4,30 @@ const moment = require('moment-timezone');
 const HTMLParser = require('node-html-parser');
 const core = require('@actions/core');
 const MD5 = require("./md5");
-const { NlpManager } = require('node-nlp');
+const { NlpManager, ConversationContext } = require('node-nlp');
 const html2md = require('html-to-md')
-
-const deepai = require('deepai');
+const Tokenizer = require('sentence-tokenizer');
+// const deepai = require('deepai')
 
 const dotenv = require("dotenv")
 
 dotenv.config()
 
-const { DEEPAI: DEEPAI, Title: Title, Content: Content, CLOUDFLARE_EMAIL: CLOUDFLARE_EMAIL, CLOUDFLARE_API: CLOUDFLARE_API, CLOUDFLARE_ID: CLOUDFLARE_ID, KV_ID: KV_ID, From: From, BAIDU_APPID: BAIDU_APPID, BAIDU_KEY: BAIDU_KEY, APP_TOKEN: APP_TOKEN, UID_ERR: UID_ERR } = process.env;
+const { Title: Title, Content: Content, CLOUDFLARE_EMAIL: CLOUDFLARE_EMAIL, CLOUDFLARE_API: CLOUDFLARE_API, CLOUDFLARE_ID: CLOUDFLARE_ID, KV_ID: KV_ID, From: From, BAIDU_APPID: BAIDU_APPID, BAIDU_KEY: BAIDU_KEY, APP_TOKEN: APP_TOKEN, UID_ERR: UID_ERR } = process.env;
 var { UID: UID } = process.env;
 
-if (DEEPAI.localeCompare("") == 0 || BAIDU_APPID.localeCompare("") == 0 || CLOUDFLARE_EMAIL.localeCompare("") == 0 || CLOUDFLARE_API.localeCompare("") == 0 || CLOUDFLARE_ID.localeCompare("") == 0 || KV_ID.localeCompare("") == 0 || BAIDU_KEY.localeCompare("") == 0 || APP_TOKEN.localeCompare("") == 0 || UID_ERR.localeCompare("") == 0 || Title.localeCompare("") == 0 || Content.localeCompare("") == 0 || From.localeCompare("") == 0) {
+if (BAIDU_APPID.localeCompare("") == 0 || CLOUDFLARE_EMAIL.localeCompare("") == 0 || CLOUDFLARE_API.localeCompare("") == 0 || CLOUDFLARE_ID.localeCompare("") == 0 || KV_ID.localeCompare("") == 0 || BAIDU_KEY.localeCompare("") == 0 || APP_TOKEN.localeCompare("") == 0 || UID_ERR.localeCompare("") == 0 || Title.localeCompare("") == 0 || Content.localeCompare("") == 0 || From.localeCompare("") == 0) {
     core.setFailed(`Action failed because of empty required secrets.`);
 }
 
-var manager;
 
-deepai.setApiKey(DEEPAI);
+core.setSecret(Title);
+core.setSecret(Content);
+core.setSecret(From);
+
+// deepai.setApiKey(DEEPAI);
+
+var manager;
 
 // GET accounts/:account_identifier/storage/kv/namespaces/:namespace_identifier/values/:key_name
 async function loadUID() {
@@ -49,8 +54,15 @@ async function initNlp() {
     manager.addDocument('en', 'This message contains', 'start');
     manager.addDocument('en', 'This message includes', 'start');
     manager.addDocument('en', "You are receiving this communication because you are a member of UW-Madison and included on distribution lists for official university correspondence.", 'end');
+    manager.addDocument('en', "University Health Services has provided more than %number% doses of COVID-19 vaccines", "vaccine")
+    manager.addDocument('en', "%number% doses of vaccines has been administrated", "vaccine")
+    manager.addDocument('en', "have administrated %number% doses of vaccines", "vaccine")
+    manager.addDocument('en', "have provided %number% doses of vaccines", "vaccine")
+
 
     await manager.train();
+    // console.log(response)
+    // console.log(context);
 }
 
 
@@ -98,50 +110,29 @@ function containIgnoreCases(message, toFind) {
     return message.toLowerCase().indexOf(toFind.toLowerCase()) != -1;
 }
 
-async function sendMessage(message) {
+async function sendMessage(summary, message) {
     let uids = [];
     for (let i of UID.split(";")) {
         if (i.length != 0)
             uids.push(i);
     }
-    let response;
-    if (Array.isArray(message)) {
-        for (let i of message) {
-            response = await fetch("http://wxpusher.zjiecode.com/api/send/message", {
-                "headers": {
-                    "accept": "*/*",
-                    "content-type": "application/json"
-                },
-                "body": JSON.stringify({
-                    "appToken": APP_TOKEN,
-                    "content": i,
-                    "contentType": 1,//内容类型 1表示文字  2表示html(只发送body标签内部的数据即可，不包括body标签) 3表示markdown 
-                    "uids": uids,
-                    "url": undefined //原文链接，可选参数
-                }),
-                "method": "POST"
-            });
-            // await response.json();
-            await new Promise(r => setTimeout(r, 60000));
-        }
-    } else {
-        response = await fetch("http://wxpusher.zjiecode.com/api/send/message", {
-            "headers": {
-                "accept": "*/*",
-                "content-type": "application/json"
-            },
-            "body": JSON.stringify({
-                "appToken": APP_TOKEN,
-                "content": message,
-                "contentType": 1,//内容类型 1表示文字  2表示html(只发送body标签内部的数据即可，不包括body标签) 3表示markdown 
-                "uids": uids,
-                "url": undefined //原文链接，可选参数
-            }),
-            "method": "POST"
-        });
-        // await response.json();
-        await new Promise(r => setTimeout(r, 60000));
-    }
+    let response = await fetch("http://wxpusher.zjiecode.com/api/send/message", {
+        "headers": {
+            "accept": "*/*",
+            "content-type": "application/json"
+        },
+        "body": JSON.stringify({
+            "appToken": APP_TOKEN,
+            "summary": summary,
+            "content": message,
+            "contentType": 3,//内容类型 1表示文字  2表示html(只发送body标签内部的数据即可，不包括body标签) 3表示markdown 
+            "uids": uids,
+            "url": undefined //原文链接，可选参数
+        }),
+        "method": "POST"
+    });
+
+    return await response.json();
 }
 
 async function sendErrorMessage(message) {
@@ -158,7 +149,7 @@ async function sendErrorMessage(message) {
         "body": JSON.stringify({
             "appToken": APP_TOKEN,
             "content": message,
-            "contentType": 1,//内容类型 1表示文字  2表示html(只发送body标签内部的数据即可，不包括body标签) 3表示markdown 
+            "contentType": 3,//内容类型 1表示文字  2表示html(只发送body标签内部的数据即可，不包括body标签) 3表示markdown 
             "uids": uids,
             "url": undefined //原文链接，可选参数
         }),
@@ -223,16 +214,20 @@ async function truncate(message) {
     return resp.output;
 }
 
-async function getContent(root) {
-    //TODO: Need replace
-    let contentArray = root;
-    let length = contentArray.length;
-    for (let i = 0; i < length; i++) {
-        contentArray.splice((2 * i + 1), 0, await translate(contentArray[(2 * i)]) + "\n");
+async function getInformation(message) {
+    //get information
+    var tokenizer = new Tokenizer('Chuck');
+    tokenizer.setEntry(message);
+    let content = "";
+    for (let i of tokenizer.getSentences()) {
+        const context = new ConversationContext();
+        let response = await manager.process('en', i, context);
+        if (response.intent.localeCompare("vaccine") == 0 && response.score > 0.9) {
+            content += response.utterance + " ";
+        }
     }
-    return contentArray.join("\n");
+    return content;
 }
-
 
 async function handleData() {
     let root = HTMLParser.parse(Content, {
@@ -243,21 +238,12 @@ async function handleData() {
     if (root.querySelectorAll("body").length != 0) {
         root = root.querySelectorAll("body")[0];
     }
-    core.info("Successfully parsed");
 
     for (let i of root.querySelectorAll('div[style*="display: none;"]')) {
         i.parentNode.removeChild(i);
     }
-    core.info("Successfully parsed");
 
-    // let contentArray = root.structuredText().split("\n");
-    // let index = 0;
-    // let dict = {};
-    // for (; index < contentArray.length; index++) {
-
-    // }
-
-    // core.info(contentArray)
+    let k = await getInformation(root.text);
 
     for (let i of root.querySelectorAll("a")) {
         i.parentNode.exchangeChild(i, HTMLParser.parse("<span>" + i.text + "</span>"))
@@ -268,30 +254,26 @@ async function handleData() {
         i.remove();
     }
 
-    //translation
-
-
     let content = html2md(root.toString(), {
         skipTags: ['table', 'tr', 'td', 'tbody', 'font', 'thead', 'th', 'center']
     });
 
-    let contentArray = content.split("\n");
-    console.log(root.text)
+    let contentArray = content.match(/[^\r\n]+/g);
+    // console.log(content)
+    // console.log(root.text)
+    // console.log(contentArray.length) 
+    // console.log(contentArray)
+    let toRe = "";
+    let length = contentArray.length;
+    for (let i = 0; i < length; i++) {
+        if(contentArray[i].trim().length == 0) continue;
+        console.log(i + contentArray[i])
+        toRe += contentArray[i] + "\n\n" + await translate(contentArray[i]) + "\n\n\n";
+    }
+    console.log(toRe);
+    let summary = "学校下发了一周概览。" + await translate(k);
 
-    console.log(await truncate(root.text))
-
-    // const response = await manager.process('en', 'This message covers');
-    // console.log(response);
-
-    // core.info("Start to get summary");
-
-    let summary = "";
-
-    // core.info("Successfully get summary");
-    // core.info("Start to get content");
-
-    // let content = await getContent(root);
-    // core.info("Successfully get content");
+    return [summary, toRe];
 
 }
 
@@ -299,15 +281,17 @@ async function main() {
     //console.log(await getSchoolData());
     //mainFunction();
     try {
+        await loadUID();
         //console.log(await translate("apple"));
-        await handleData();
-        // await initNlp();
-        // core.info("Start to send message");
+        await initNlp();
+        let result = await handleData();
+        core.info("Start to send message");
         // console.log(result[1])
-        // await sendMessage(getTime() + result[0], result[1]);
-        // core.info("Message sent");
+        await sendMessage(result[0], result[1]);
+        core.info("Message sent");
     } catch (e) {
-        // await sendErrorMessage("Error happened " + e)
+        await sendErrorMessage("Error happened " + e)
+        core.setFailed("Error happened " + e)
     }
     //getTime();
 }
