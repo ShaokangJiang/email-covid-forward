@@ -95,12 +95,8 @@ function getTime() {
     var timeBeijing = moment().tz('Asia/Shanghai').format("YYYY-MM-DD HH:mm:ss");
     //console.log(timeCST);
     //console.log(timeBeijing);
-    let str = "[" + getYear(timeBeijing) + "年" + getMonth(timeBeijing) + "月" + getDay(timeBeijing) + "日,农历";
+    let str = "[" + getYear(timeBeijing) + "年" + getMonth(timeBeijing) + "月" + getDay(timeBeijing) + "日";
     const solar2lunarData = solarLunar.solar2lunar(getYear(timeBeijing), getMonth(timeBeijing), getDay(timeBeijing)); // 输入的日子为公历
-    str += solar2lunarData.monthCn + solar2lunarData.dayCn;
-    if (solar2lunarData.term != undefined && solar2lunarData.term.localeCompare('') != 0) {
-        str += "\n今天是" + solar2lunarData.term;
-    }
     str += "]\n";
     //console.log(str);
     return str;
@@ -216,15 +212,31 @@ async function truncate(message) {
 
 async function getInformation(message) {
     //get information
-    var tokenizer = new Tokenizer('Chuck');
+    let threshold = 70;
+    var tokenizer = new Tokenizer('Chuck');//Use array and score to select
     tokenizer.setEntry(message);
     let content = "";
+    let scores = []
     for (let i of tokenizer.getSentences()) {
         const context = new ConversationContext();
         let response = await manager.process('en', i, context);
         if (response.intent.localeCompare("vaccine") == 0 && response.score > 0.9) {
-            content += response.utterance + " ";
+            let cont = {
+                "utterance": response.utterance,
+                "score": response.score
+            }
+            scores.push(cont);
         }
+    }
+    scores.sort((a, b) => {
+        return b.score - a.score;
+    });
+    // console.log(scores);
+    for (let i of scores) {
+        let translated = await translate(i.utterance);
+        content += translated;
+        threshold -= translated.length;
+        if (threshold < 0) break;
     }
     return content;
 }
@@ -244,6 +256,7 @@ async function handleData() {
     }
 
     let k = await getInformation(root.text);
+    // console.log(k);
 
     for (let i of root.querySelectorAll("a")) {
         i.parentNode.exchangeChild(i, HTMLParser.parse("<span>" + i.text + "</span>"))
@@ -266,14 +279,14 @@ async function handleData() {
     let toRe = "";
     let length = contentArray.length;
     for (let i = 0; i < length; i++) {
-        if(contentArray[i].trim().length == 0) continue;
-        console.log(i + contentArray[i])
+        if (contentArray[i].trim().length == 0) continue;
+        // console.log(i + contentArray[i])
         toRe += contentArray[i] + "\n\n" + await translate(contentArray[i]) + "\n\n\n";
     }
-    console.log(toRe);
-    let summary = "学校下发了一周概览。" + await translate(k);
+    // console.log(toRe);
+    let summary = "学校下发了一周概览。" + k;
 
-    return [summary, toRe];
+    return [summary.substring(0, 100), toRe];
 
 }
 
@@ -282,12 +295,13 @@ async function main() {
     //mainFunction();
     try {
         await loadUID();
+        console.log(UID)
         //console.log(await translate("apple"));
         await initNlp();
         let result = await handleData();
         core.info("Start to send message");
         // console.log(result[1])
-        await sendMessage(result[0], result[1]);
+        console.log(await sendMessage(result[0], result[1]));
         core.info("Message sent");
     } catch (e) {
         await sendErrorMessage("Error happened " + e)
