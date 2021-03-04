@@ -295,13 +295,13 @@ async function main() {
     //mainFunction();
     try {
         await loadUID();
-        console.log(UID)
+        // console.log(UID)
         //console.log(await translate("apple"));
         await initNlp();
         let result = await handleData();
         core.info("Start to send message");
         // console.log(result[1])
-        console.log(await sendMessage(result[0], result[1]));
+        await sendMessage(result[0], result[1]);
         core.info("Message sent");
     } catch (e) {
         await sendErrorMessage("Error happened " + e)
