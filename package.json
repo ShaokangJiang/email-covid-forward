@@ -1,0 +1,31 @@
+{
+  "name": "email-covid-forward",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShaokangJiang/email-covid-forward.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ShaokangJiang/email-covid-forward/issues"
+  },
+  "homepage": "https://github.com/ShaokangJiang/email-covid-forward#readme",
+  "dependencies": {
+    "@actions/core": "^1.2.6",
+    "deepai": "^1.0.17",
+    "dotenv": "^8.2.0",
+    "html-to-md": "^0.3.9",
+    "moment-timezone": "^0.5.33",
+    "node-fetch": "^2.6.1",
+    "node-html-parser": "^3.0.3",
+    "node-nlp": "^4.21.3",
+    "solarlunar": "^2.0.7"
+  }
+}
