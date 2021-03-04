@@ -1,0 +1,31 @@
+name: example-client-payload-action
+on: repository_dispatch
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '10'
+      - run: npm install
+      - run: node index.js
+        env: 
+          APP_TOKEN: ${{ secrets.APP_TOKEN }}
+          UID_ERR: ${{ secrets.UID_ERR }}
+          Title: ${{ github.event.client_payload.Title }}
+          Content: ${{ github.event.client_payload.Content }}
+          From: ${{ github.event.client_payload.From }}
+          CLOUDFLARE_API: ${{ secrets.CLOUDFLARE_API }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+          CLOUDFLARE_ID: ${{ secrets.CLOUDFLARE_ID }}
+          KV_ID: ${{ secrets.KV_ID }}
+          BAIDU_APPID: ${{ secrets.BAIDU_APPID }}
+          BAIDU_KEY: ${{ secrets.BAIDU_KEY }}
