@@ -18,6 +18,7 @@ var { UID: UID } = process.env;
 
 if (BAIDU_APPID.localeCompare("") == 0 || CLOUDFLARE_EMAIL.localeCompare("") == 0 || CLOUDFLARE_API.localeCompare("") == 0 || CLOUDFLARE_ID.localeCompare("") == 0 || KV_ID.localeCompare("") == 0 || BAIDU_KEY.localeCompare("") == 0 || APP_TOKEN.localeCompare("") == 0 || UID_ERR.localeCompare("") == 0 || Title.localeCompare("") == 0 || Content.localeCompare("") == 0 || From.localeCompare("") == 0) {
     core.setFailed(`Action failed because of empty required secrets.`);
+    process.exit(1);
 }
 
 
