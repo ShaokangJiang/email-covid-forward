@@ -23,7 +23,7 @@
     "dotenv": "^8.2.0",
     "html-to-md": "^0.3.9",
     "moment-timezone": "^0.5.33",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^2.6.7",
     "node-html-parser": "^3.0.3",
     "node-nlp": "^4.21.3",
     "sentence-tokenizer": "^1.0.1",
