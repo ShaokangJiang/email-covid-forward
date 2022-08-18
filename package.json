@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/ShaokangJiang/email-covid-forward#readme",
   "dependencies": {
-    "@actions/core": "^1.2.6",
+    "@actions/core": "^1.9.1",
     "deepai": "^1.0.17",
     "dotenv": "^8.2.0",
     "html-to-md": "^0.3.9",
