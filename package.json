@@ -22,7 +22,7 @@
     "deepai": "^1.0.17",
     "dotenv": "^8.2.0",
     "html-to-md": "^0.3.9",
-    "moment-timezone": "^0.5.33",
+    "moment-timezone": "^0.5.35",
     "node-fetch": "^2.6.1",
     "node-html-parser": "^3.0.3",
     "node-nlp": "^4.21.3",
